@@ -1,0 +1,18 @@
+# Core Streamlit and data processing
+streamlit==1.39.0
+pandas==2.2.3
+numpy==2.1.2
+plotly==5.24.1
+
+# Database connection
+psycopg2-binary==2.9.9
+
+# Environment and configuration
+python-dotenv==1.0.1
+
+# Statistical analysis
+scipy==1.14.1
+scikit-learn==1.5.2
+
+# UI components
+streamlit-tags==1.2.8
