@@ -294,7 +294,7 @@ if global_stats:
     st.markdown(
         f"""
         Interactive keyword search and trend analysis for EA Forum data, featuring **{total_posts} posts** and **{total_comments} comments** 
-        from **{total_authors} authors**. Search for specific terms, visualize trends over time, and explore related content.
+        from **{total_authors} authors**. Search for specific terms, visualize trends over time, and explore related content. Forked from https://www.community-archive.org/.
         """
     )
     
@@ -314,7 +314,7 @@ else:
     st.markdown(
         """
         Interactive keyword search and trend analysis for EA Forum data. Search for specific terms, 
-        visualize trends over time, and explore related content.
+        visualize trends over time, and explore related content. Forked from https://www.community-archive.org/.
         """
     )
     
