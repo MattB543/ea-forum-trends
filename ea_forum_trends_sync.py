@@ -333,7 +333,7 @@ else:
 # Add a divider for visual separation
 st.divider()
 
-default_words = ["soil", "alignment", "existential risk"]
+default_words = ["soil", "alignment", "existential risk", "nematode", "mites"]
 
 
 def main():
