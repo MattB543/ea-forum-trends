@@ -29,7 +29,8 @@ CREATE OR REPLACE FUNCTION search_ea_content(
     author_display_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE,
     url TEXT,
-    score INTEGER
+    score INTEGER,
+    mention_count INTEGER
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -41,7 +42,13 @@ BEGIN
         COALESCE(p.author_display_name, '')::TEXT as author_display_name,
         p.posted_at as created_at,
         COALESCE(p.page_url, '')::TEXT as url,
-        COALESCE(p.base_score, 0) as score
+        COALESCE(p.base_score, 0) as score,
+        -- Count actual mentions of the search term in title + content (substring-based, case-insensitive)
+        CASE 
+            WHEN search_query IS NULL OR length(trim(search_query)) = 0 THEN 0
+            ELSE (length(lower(COALESCE(p.title, '') || ' ' || COALESCE(p.markdown_content, ''))) - 
+                  length(replace(lower(COALESCE(p.title, '') || ' ' || COALESCE(p.markdown_content, '')), lower(trim(search_query)), '')))::INTEGER / length(trim(search_query))
+        END as mention_count
     FROM fellowship_mvp p
     WHERE to_tsvector('english', COALESCE(p.markdown_content, '') || ' ' || COALESCE(p.title, '')) @@ plainto_tsquery('english', search_query)
     AND p.posted_at::date BETWEEN since_date AND until_date
@@ -57,7 +64,13 @@ BEGIN
         COALESCE(c.author_display_name, '')::TEXT as author_display_name,
         c.posted_at as created_at,
         (COALESCE(p.page_url, '') || '#comment-' || c.comment_id)::TEXT as url,
-        COALESCE(c.base_score, 0) as score
+        COALESCE(c.base_score, 0) as score,
+        -- Count actual mentions of the search term in comment content (substring-based, case-insensitive)
+        CASE 
+            WHEN search_query IS NULL OR length(trim(search_query)) = 0 THEN 0
+            ELSE (length(lower(COALESCE(c.markdown_content, ''))) - 
+                  length(replace(lower(COALESCE(c.markdown_content, '')), lower(trim(search_query)), '')))::INTEGER / length(trim(search_query))
+        END as mention_count
     FROM fellowship_mvp_comments c
     JOIN fellowship_mvp p ON c.post_id = p.post_id
     WHERE to_tsvector('english', COALESCE(c.markdown_content, '')) @@ plainto_tsquery('english', search_query)
@@ -151,5 +164,26 @@ BEGIN
     FROM unique_authors u
     WHERE u.author_display_name != 'Unknown'
     ORDER BY u.author_display_name;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Get global EA Forum statistics
+CREATE OR REPLACE FUNCTION get_ea_global_stats()
+RETURNS TABLE (
+    total_posts BIGINT,
+    total_comments BIGINT,
+    total_authors BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        (SELECT COUNT(*) FROM fellowship_mvp WHERE posted_at IS NOT NULL) as total_posts,
+        (SELECT COUNT(*) FROM fellowship_mvp_comments WHERE posted_at IS NOT NULL) as total_comments,
+        (SELECT COUNT(DISTINCT COALESCE(author_id, '')) 
+         FROM (
+             SELECT author_id FROM fellowship_mvp WHERE author_id IS NOT NULL
+             UNION 
+             SELECT author_id FROM fellowship_mvp_comments WHERE author_id IS NOT NULL
+         ) combined) as total_authors;
 END;
 $$ LANGUAGE plpgsql;

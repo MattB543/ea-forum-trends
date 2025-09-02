@@ -14,11 +14,21 @@ import plotly.graph_objects as go
 load_dotenv(".env")
 st.set_page_config(layout="wide")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Database connection from environment (supports both local .env and Streamlit Cloud secrets)
+DATABASE_URL = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL")
+
+if not DATABASE_URL:
+    st.error("🔑 Database connection not configured. Please set DATABASE_URL in your environment or Streamlit secrets.")
+    st.stop()
 
 def get_db_connection():
-    """Get database connection"""
-    return psycopg2.connect(DATABASE_URL)
+    """Get database connection with error handling for deployment"""
+    try:
+        return psycopg2.connect(DATABASE_URL)
+    except Exception as e:
+        st.error(f"❌ Database connection failed: {str(e)}")
+        st.info("💡 Make sure your DATABASE_URL is correctly configured in Streamlit secrets.")
+        st.stop()
 
 @st.cache_data(ttl=3600)
 def fetch_monthly_ea_content_counts():
@@ -131,7 +141,7 @@ def calculate_trend_metrics(word_data, monthly_counts):
     }
 
 @st.cache_data(ttl=3600)
-def get_words_in_frequency_range(min_occurrences=100, max_occurrences=3000):
+def get_words_in_frequency_range(min_occurrences=200, max_occurrences=5000):
     """Get all words within a specific frequency range"""
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -183,7 +193,7 @@ def get_words_in_frequency_range(min_occurrences=100, max_occurrences=3000):
             results = cur.fetchall()
             return [{'word': row[0], 'frequency': row[1]} for row in results]
 
-def analyze_all_words_in_range(min_occurrences=100, max_occurrences=3000, start_date=None, end_date=None):
+def analyze_all_words_in_range(min_occurrences=200, max_occurrences=5000, start_date=None, end_date=None):
     """Analyze trending words for all words in frequency range"""
     
     # Get words in frequency range
@@ -254,10 +264,10 @@ This analysis examines **every word** within a specific frequency range to find 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    min_occurrences = st.slider("Minimum word frequency", 50, 500, 100, 25)
+    min_occurrences = st.slider("Minimum word frequency", 50, 500, 200, 25)
 
 with col2:
-    max_occurrences = st.slider("Maximum word frequency", 500, 10000, 3000, 250)
+    max_occurrences = st.slider("Maximum word frequency", 500, 10000, 5000, 250)
 
 with col3:
     date_range = st.date_input(
@@ -392,7 +402,7 @@ if st.button("🔍 Analyze All Words in Range", type="primary"):
             
             st.dataframe(
                 display_df.sort_values('trend_strength', ascending=False),
-                width='stretch',
+                use_container_width=True,
                 height=500
             )
         
@@ -474,5 +484,4 @@ with st.expander("📚 Comprehensive Analysis Methodology"):
        - Focuses on content words with semantic meaning
     """)
 
-if __name__ == "__main__":
-    pass
+# App runs automatically when script is executed (for Streamlit Cloud deployment)

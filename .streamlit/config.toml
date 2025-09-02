@@ -4,9 +4,19 @@ developmentMode = false
 [server]
 runOnSave = true
 allowRunOnSave = true
+maxUploadSize = 200
 
 [browser]
 gatherUsageStats = false
+
+[client]
+caching = true
+displayEnabled = true
+
+[runner]
+magicEnabled = true
+installTracer = false
+fixMatplotlib = true
 
 [theme]
 primaryColor = "#FF6B6B"
